@@ -1,60 +1,141 @@
 import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const app = document.querySelector('#app')
 
-<div class="ticks"></div>
-
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+app.innerHTML = `
+  <main class="viewer-shell">
+    <header class="viewer-header">
+      <div>
+        <p class="eyebrow">Three.js + Sketchfab</p>
+        <h1>Visualizador 3D interativo</h1>
+      </div>
+      <p class="status" id="model-status">Carregando modelo...</p>
+    </header>
+    <canvas class="webgl" aria-label="Cena 3D interativa"></canvas>
+  </main>
 `
 
-setupCounter(document.querySelector('#counter'))
+const canvas = document.querySelector('.webgl')
+const statusElement = document.querySelector('#model-status')
+
+const scene = new THREE.Scene()
+scene.background = new THREE.Color(0xf4f1ea)
+
+const camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  100,
+)
+camera.position.set(3.2, 2.3, 4.2)
+
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+})
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.outputColorSpace = THREE.SRGBColorSpace
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.6)
+scene.add(ambientLight)
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 3)
+directionalLight.position.set(4, 6, 5)
+scene.add(directionalLight)
+
+const fillLight = new THREE.DirectionalLight(0xbfd7ff, 0.9)
+fillLight.position.set(-3, 2, -4)
+scene.add(fillLight)
+
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.enablePan = true
+controls.enableZoom = true
+controls.target.set(0, 0.75, 0)
+controls.update()
+
+const loader = new GLTFLoader()
+const modelSources = [
+  {
+    path: '/models/simple-low-poly-character.glb',
+    label: 'Simple Low Poly Character',
+  },
+  {
+    path: '/models/sketchfab-sample.gltf',
+    label: 'Modelo demonstrativo',
+  },
+]
+
+function loadModel(sourceIndex = 0) {
+  const source = modelSources[sourceIndex]
+
+  loader.load(
+    source.path,
+    (gltf) => {
+    const model = gltf.scene
+    const box = new THREE.Box3().setFromObject(model)
+    const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
+    const maxAxis = Math.max(size.x, size.y, size.z)
+    const scale = maxAxis > 0 ? 2.4 / maxAxis : 1
+
+    model.position.sub(center)
+    model.scale.setScalar(scale)
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+
+    scene.add(model)
+      statusElement.textContent = `${source.label} carregado`
+    },
+    undefined,
+    (error) => {
+      statusElement.textContent = 'Erro ao carregar o modelo'
+      console.error('Erro ao carregar o modelo GLB:', error)
+    },
+  )
+}
+
+async function loadFirstAvailableModel() {
+  for (const [index, source] of modelSources.entries()) {
+    const response = await fetch(source.path).catch(() => null)
+    const contentType = response?.headers.get('content-type') ?? ''
+    const isModelFile =
+      contentType.includes('model/gltf') ||
+      contentType.includes('model/gltf-binary') ||
+      contentType.includes('application/octet-stream')
+
+    if (response?.ok && isModelFile) {
+      loadModel(index)
+      return
+    }
+  }
+
+  statusElement.textContent = 'Nenhum modelo encontrado'
+}
+
+loadFirstAvailableModel()
+
+function handleResize() {
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+}
+
+window.addEventListener('resize', handleResize)
+
+function animate() {
+  requestAnimationFrame(animate)
+  controls.update()
+  renderer.render(scene, camera)
+}
+
+animate()
