@@ -6,9 +6,9 @@ Projeto desenvolvido para a atividade prática utilizando Three.js, GLTFLoader e
 
 ## Modelo utilizado
 
-Nome do modelo: NOME DO MODELO AQUI  
-Origem: LINK DO SKETCHFAB AQUI  
-Formato: GLB / glTF
+Nome do modelo: NOME DO MODELO AQUI  NAO ESQUECER
+Origem: LINK DO SKETCHFAB AQUI (NAO ESQUECER )
+Formato: GLB / glTF 
 
 ## Tecnologias
 
