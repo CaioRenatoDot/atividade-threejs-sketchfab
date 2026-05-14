@@ -9,8 +9,8 @@ app.innerHTML = `
   <main class="viewer-shell">
     <header class="viewer-header">
       <div>
-        <p class="eyebrow">Three.js + Sketchfab</p>
-        <h1>Visualizador 3D interativo</h1>
+        <p class="eyebrow">Three.js + Sketchfab (Marcos UP2)</p>
+        <h1>3D</h1>
       </div>
       <p class="status" id="model-status">Carregando modelo...</p>
     </header>
@@ -61,12 +61,8 @@ controls.update()
 const loader = new GLTFLoader()
 const modelSources = [
   {
-    path: '/models/simple-low-poly-character.glb',
-    label: 'Simple Low Poly Character',
-  },
-  {
-    path: '/models/sketchfab-sample.gltf',
-    label: 'Modelo demonstrativo',
+    path: '/models/scene.gltf',
+    label: 'Black Cat',
   },
 ]
 
@@ -76,23 +72,24 @@ function loadModel(sourceIndex = 0) {
   loader.load(
     source.path,
     (gltf) => {
-    const model = gltf.scene
-    const box = new THREE.Box3().setFromObject(model)
-    const size = box.getSize(new THREE.Vector3())
-    const center = box.getCenter(new THREE.Vector3())
-    const maxAxis = Math.max(size.x, size.y, size.z)
-    const scale = maxAxis > 0 ? 2.4 / maxAxis : 1
+      const model = gltf.scene
+      const box = new THREE.Box3().setFromObject(model)
+      const size = box.getSize(new THREE.Vector3())
+      const center = box.getCenter(new THREE.Vector3())
+      const maxAxis = Math.max(size.x, size.y, size.z)
+      const scale = maxAxis > 0 ? 2.4 / maxAxis : 1
 
-    model.position.sub(center)
-    model.scale.setScalar(scale)
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
+      model.position.sub(center)
+      model.position.y += 0.8
+      model.scale.setScalar(scale)
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
 
-    scene.add(model)
+      scene.add(model)
       statusElement.textContent = `${source.label} carregado`
     },
     undefined,
